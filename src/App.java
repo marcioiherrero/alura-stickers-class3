@@ -1,59 +1,38 @@
 import java.io.InputStream;
-import java.net.URI;
 import java.net.URL;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
 import java.util.List;
-import java.util.Map;
 
 public class App {
 	
 	public static void main(String[] args) throws Exception {
 		
+		APIsUrl minhaAPIsUrl = APIsUrl.URL_IMDB;
+		
 		//Fazer uma conexão HTTP e buscar os TOP 250 filmes
-		//String url = "https://api.mocki.io/v2/549a5d8b";
-		String url = "https://api.mocki.io/v2/549a5d8b/Top250Movies";
-		URI endereco = URI.create(url);
-		HttpClient client = HttpClient.newHttpClient();
-		HttpRequest request = HttpRequest.newBuilder(endereco).GET().build();
-		HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
-		String body = response.body();
-		
-		//Extrair só os dados que interessam (título, pôster e classificação)
-		JsonParser parser = new JsonParser();
-		List<Map<String, String>> listaFilmes = parser.parse(body);
-		
-		System.out.println(listaFilmes.size() + " filmes\n");
+		ClienteHttp http = new ClienteHttp();
+		String json = http.buscaDados(minhaAPIsUrl.url());
 		
 		//Exibir e manipular os dados
-		for (Map<String, String> filme : listaFilmes) {
+		ExtratorDeConteudo extrator = new ExtratorDeConteudoDoIMDB();
+		List<Conteudo> conteudos = extrator.extraiConteudos(json);
+		
+		System.out.println("API retornou " + conteudos.size() + " filmes.\n");
+		
+		GeradoraDeFigurinhas geradora = new GeradoraDeFigurinhas();
+		
+		for(int i = 0; i < 10; i++) {
+			Conteudo conteudo = conteudos.get(i);
 			
-			String urlImagem = filme.get("image");
-			String titulo = filme.get("title");
+			InputStream inputStream = new URL(conteudo.getUrlImagem()).openStream();
+			String nomeArquivo = "saida/" + conteudo.getTitulo() + ".png";
 			
-			InputStream inputStream = new URL(urlImagem).openStream();
-			String nomeArquivo = "saida/" + titulo + ".png";
-			
-			GeradoraDeFigurinhas geradora = new GeradoraDeFigurinhas();
 			geradora.cria(inputStream, nomeArquivo);
 			
-			System.out.println(filme.get("title"));
-			System.out.println(filme.get("image"));
-			System.out.println(filme.get("imDbRating"));
+			System.out.println(conteudo.getTitulo());
+			System.out.println();
 			
-			System.out.print("(");
-			
-			double classif1 = Double.parseDouble(filme.get("imDbRating"));
-			long classif2 = (long) classif1;
-
-			for (int i = 0; i < classif2; i++) {
-				System.out.print("*");
-			}
-			
-			System.out.println(")\n");
 		}
+		
 	}
-
+	
 }
